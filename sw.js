@@ -1,21 +1,22 @@
-const CACHE_NAME = 'jbox-engine-v1';
+const CACHE_NAME = 'jbox-engine-v2';
 const ASSETS = [
+  './',
   'index.html',
   'manifest.json',
   'icon-192.png',
   'icon-512.png'
 ];
 
-// Force immediate local device caching upon install
+// Cache all assets on install
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS);
-    })
+    }).then(() => self.skipWaiting())
   );
 });
 
-// Purge obsolete cache builds when a script revision rolls out
+// Activate and clean old caches
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keys) => {
@@ -26,15 +27,15 @@ self.addEventListener('activate', (e) => {
           }
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
 });
 
-// Intercept connection dropouts and immediately fire local storage cache
+// Network first, falling back to offline local cache
 self.addEventListener('fetch', (e) => {
   e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      return cachedResponse || fetch(e.request);
+    fetch(e.request).catch(() => {
+      return caches.match(e.request);
     })
   );
 });
